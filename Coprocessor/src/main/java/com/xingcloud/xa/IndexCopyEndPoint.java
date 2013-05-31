@@ -78,11 +78,13 @@ public class IndexCopyEndPoint extends BaseEndpointCoprocessor implements IndexC
                     kvNums = 0 ;
                     executor.execute(new Writer(dataPuts));
                     dataPuts = new ArrayList<Put>(batchSize);
+                    totalCount.addAndGet(dataPuts.size());
                 }
                 results.clear();
             }
             if (dataPuts.size() != 0) {
                 executor.execute(new Writer(dataPuts));
+                totalCount.addAndGet(dataPuts.size());
             }
             scanner.close();
             executor.shutdown();

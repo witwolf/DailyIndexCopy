@@ -69,7 +69,7 @@ public class IndexCopyEndPoint extends BaseEndpointCoprocessor implements IndexC
                 BytesUtil.replaceBytes(today, 0, rowKey, 2, today.length);
                 Put put = new Put(rowKey);
                 for ( KeyValue keyValue : results) {
-                    put.add(keyValue.getFamily(), keyValue.getQualifier(), keyValue.getValue());
+                    put.add(keyValue);
                     kvNums ++ ;
                 }
                 dataPuts.add(put);

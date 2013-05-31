@@ -37,20 +37,20 @@ public class IndexCopyEndPoint extends BaseEndpointCoprocessor implements IndexC
 
     private Configuration config;
     private String tableName;
-    private String property ;
+    private String property;
     private AtomicInteger totalCount = new AtomicInteger(0);
     private AtomicInteger finishedCount = new AtomicInteger(0);
-    private String regionName ;
+    private String regionName;
 
     private static Log LOG = LogFactory.getLog(IndexCopyEndPoint.class);
 
     @Override
-    public int copyIndex(byte[] startKey,byte[] stopKey, String tableName,String property) {
+    public int copyIndex(byte[] startKey, byte[] stopKey, String tableName, String property) {
         RegionCoprocessorEnvironment environment = (RegionCoprocessorEnvironment) getEnvironment();
-        regionName = Bytes.toString(environment.getRegion().getRegionName()) ;
+        regionName = Bytes.toString(environment.getRegion().getRegionName());
         config = HBaseConfiguration.create();
         this.tableName = tableName;
-        this.property = property ;
+        this.property = property;
         byte[] today = Bytes.toBytes(DateUtil.getTodayDateStr());
         List<KeyValue> results = new ArrayList<KeyValue>();
         List<Put> dataPuts = new ArrayList<Put>(batchSize);
@@ -59,18 +59,23 @@ public class IndexCopyEndPoint extends BaseEndpointCoprocessor implements IndexC
         Scan scan = new Scan();
         scan.setStartRow(startKey);
         scan.setStopRow(stopKey);
-        scan.setMaxVersions(1);
 
         try {
             InternalScanner scanner = environment.getRegion().getScanner(scan);
-            while (scanner.next(results, 1)) {
+            int kvNums = 0 ;
+            while (scanner.next(results)) {
                 KeyValue kv = results.get(0);
                 byte[] rowKey = kv.getRow();
                 BytesUtil.replaceBytes(today, 0, rowKey, 2, today.length);
                 Put put = new Put(rowKey);
-                put.add(kv.getFamily(), kv.getQualifier(), kv.getValue());
+                for ( KeyValue keyValue : results) {
+                    put.add(keyValue.getFamily(), keyValue.getQualifier(), keyValue.getValue());
+                    kvNums ++ ;
+                }
                 dataPuts.add(put);
-                if (dataPuts.size() >= batchSize) {
+
+                if (dataPuts.size() >= batchSize || kvNums >= batchSize) {
+                    kvNums = 0 ;
                     executor.execute(new Writer(dataPuts));
                     dataPuts = new ArrayList<Put>(batchSize);
                 }
